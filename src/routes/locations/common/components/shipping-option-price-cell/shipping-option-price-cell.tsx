@@ -56,8 +56,13 @@ export const ShippingOptionPriceCell = <TData, TValue = any>({
   const { container, input } = renderProps
   const { isAnchor } = container
 
-  const currency = currencies[code.toUpperCase()]
 
+    const currency = currencies[code.toUpperCase()] || {
+        code: code.toUpperCase(),
+        symbol_native: code.toUpperCase(),
+        name: code.toUpperCase(),
+        decimal_digits: 2,
+    }
   return (
     <Controller
       control={control}
