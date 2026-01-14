@@ -727,6 +727,12 @@ export const currencies: Record<string, CurrencyInfo> = {
     symbol_native: "ZWL$",
     decimal_digits: 0,
   },
+    USDT: {
+        code: "USDT",
+        name: "Tether",
+        symbol_native: "₮",
+        decimal_digits: 2,
+    },
 }
 
 export function getCurrencySymbol(code: string) {
