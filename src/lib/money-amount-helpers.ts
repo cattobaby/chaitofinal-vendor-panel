@@ -9,29 +9,48 @@ export const getDecimalDigits = (currency: string) => {
  * @param amount - The amount to format
  * @param currencyCode - The currency code to format the amount in
  * @returns - The formatted amount
- *
- * @example
- * getFormattedAmount(10, "usd") // '$10.00' if the browser's locale is en-US
- * getFormattedAmount(10, "usd") // '10,00 $' if the browser's locale is fr-FR
  */
 export const getLocaleAmount = (amount: number, currencyCode: string) => {
-  const formatter = new Intl.NumberFormat([], {
-    style: "currency",
-    currencyDisplay: "narrowSymbol",
-    currency: currencyCode,
-  })
+  try {
+    // Intenta usar el formateador nativo del navegador
+    const formatter = new Intl.NumberFormat([], {
+      style: "currency",
+      currencyDisplay: "narrowSymbol",
+      currency: currencyCode,
+    })
+    return formatter.format(amount)
+  } catch (error) {
+    // FALLBACK: Si falla (ej. USDT), lo construimos manualmente
+    const code = currencyCode.toUpperCase()
+    const currencyInfo = currencies[code]
 
-  return formatter.format(amount)
+    // Configuración por defecto si no encontramos info
+    const decimalDigits = currencyInfo?.decimal_digits ?? 2
+    const symbol = currencyInfo?.symbol_native ?? code
+
+    const formatter = new Intl.NumberFormat([], {
+      style: "decimal", // Usamos decimal, no currency, para evitar el error
+      minimumFractionDigits: decimalDigits,
+      maximumFractionDigits: decimalDigits,
+    })
+
+    return `${symbol}${formatter.format(amount)}`
+  }
 }
 
 export const getNativeSymbol = (currencyCode: string) => {
-  const formatted = new Intl.NumberFormat([], {
-    style: "currency",
-    currency: currencyCode,
-    currencyDisplay: "narrowSymbol",
-  }).format(0)
+  try {
+    const formatted = new Intl.NumberFormat([], {
+      style: "currency",
+      currency: currencyCode,
+      currencyDisplay: "narrowSymbol",
+    }).format(0)
 
-  return formatted.replace(/\d/g, "").replace(/[.,]/g, "").trim()
+    return formatted.replace(/\d/g, "").replace(/[.,]/g, "").trim()
+  } catch (error) {
+    // FALLBACK: Si falla, sacamos el símbolo de nuestro archivo de constantes
+    return currencies[currencyCode.toUpperCase()]?.symbol_native || currencyCode
+  }
 }
 
 /**
