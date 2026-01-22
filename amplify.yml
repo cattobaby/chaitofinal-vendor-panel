@@ -4,6 +4,9 @@ frontend:
     preBuild:
       commands:
         - nvm use 20
+        - corepack enable                # <--- 1. Activa el gestor de versiones
+        - yarn set version 3.2.1         # <--- 2. Instala Yarn 3 explícitamente
+        - yarn config set nodeLinker node-modules # <--- 3. Asegura compatibilidad
         - yarn install
     build:
       commands:
