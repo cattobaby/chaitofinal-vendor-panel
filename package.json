@@ -4,7 +4,8 @@
   "scripts": {
     "generate:static": "node ./scripts/generate-currencies.js && prettier --write ./src/lib/currencies.ts",
     "dev": "vite",
-    "build": "tsup && node ./scripts/generate-types.js",
+    "build": "vite build",
+    "build:lib": "tsup && node ./scripts/generate-types.js",
     "build:preview": "vite build",
     "build:admin": "medusa build",
     "preview": "vite preview",
