@@ -28,14 +28,6 @@ export const RouteMap: RouteObject[] = [
             lazy: () => import("../../routes/home"),
           },
           {
-            path: "stripe-connect",
-            handle: {
-              breadcrumb: () => "Stripe Connects",
-            },
-            errorElement: <ErrorBoundary />,
-            lazy: () => import("../../routes/stripe-connect"),
-          },
-          {
             path: "dashboard",
             errorElement: <ErrorBoundary />,
             lazy: () => import("../../routes/dashboard"),
