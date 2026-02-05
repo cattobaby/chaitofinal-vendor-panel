@@ -36,7 +36,8 @@ import {
 } from "../../../../../components/modals"
 import { KeyboundForm } from "../../../../../components/utilities/keybound-form"
 import { useUpdateProduct } from "../../../../../hooks/api/products"
-import { uploadFilesQuery } from "../../../../../lib/client"
+// CHANGED: Import the S3 upload helper
+import { uploadImageAndGetUrl } from "../../../../../lib/uploads"
 import { UploadMediaFormItem } from "../../../common/components/upload-media-form-item"
 import {
   EditProductMediaSchema,
@@ -103,35 +104,31 @@ export const EditProductMediaForm = ({ product }: ProductMediaViewProps) => {
   const { mutateAsync, isPending } = useUpdateProduct(product.id!)
 
   const handleSubmit = form.handleSubmit(async ({ media }) => {
-    const filesToUpload = media
-      .map((m, i) => ({ file: m.file, index: i }))
-      .filter((m) => !!m.file)
+    // CHANGED: Use parallel S3 upload flow instead of bulk multipart upload
+    let withUpdatedUrls: any[] = []
 
-    let uploaded: HttpTypes.AdminFile[] = []
-
-    if (filesToUpload.length) {
-      const { files } = await uploadFilesQuery(filesToUpload)
-        // .then((res) => res.json())
-        .catch(() => {
-          form.setError("media", {
-            type: "invalid_file",
-            message: t("products.media.failedToUpload"),
-          })
-          return { files: [] }
+    try {
+      withUpdatedUrls = await Promise.all(
+        media.map(async (entry) => {
+          if (entry.file) {
+            // Upload to S3 and get the public URL
+            const url = await uploadImageAndGetUrl(entry.file)
+            return {
+              ...entry,
+              url,
+              file: null, // Clear file to prevent re-upload attempts
+            }
+          }
+          return entry
         })
-      uploaded = files
+      )
+    } catch (e) {
+      form.setError("media", {
+        type: "invalid_file",
+        message: t("products.media.failedToUpload"),
+      })
+      return
     }
-
-    const withUpdatedUrls = media.map((entry, i) => {
-      const toUploadIndex = filesToUpload.findIndex((m) => m.index === i)
-      if (toUploadIndex > -1) {
-        return {
-          ...entry,
-          url: uploaded[toUploadIndex]?.url,
-        }
-      }
-      return entry
-    })
 
     const thumbnail = withUpdatedUrls.find((m) => m.isThumbnail)?.url
 
@@ -252,7 +249,7 @@ export const EditProductMediaForm = ({ product }: ProductMediaViewProps) => {
                         checked={
                           !!selection[
                             fields.find((m) => m.field_id === activeId)!.id!
-                          ]
+                            ]
                         }
                       />
                     ) : null}
@@ -357,10 +354,10 @@ interface MediaGridItemProps {
 }
 
 const MediaGridItem = ({
-  media,
-  checked,
-  onCheckedChange,
-}: MediaGridItemProps) => {
+                         media,
+                         checked,
+                         onCheckedChange,
+                       }: MediaGridItemProps) => {
   const { t } = useTranslation()
 
   const handleToggle = useCallback(
@@ -434,9 +431,9 @@ const MediaGridItem = ({
 }
 
 export const MediaGridItemOverlay = ({
-  media,
-  checked,
-}: {
+                                       media,
+                                       checked,
+                                     }: {
   media: MediaView
   checked: boolean
 }) => {

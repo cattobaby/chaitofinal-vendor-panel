@@ -13,7 +13,8 @@ import {
   useExtendableForm,
 } from "../../../../../extensions"
 import { useCreateProduct } from "../../../../../hooks/api/products"
-import { uploadFilesQuery } from "../../../../../lib/client"
+// CHANGED: Import the S3 upload helper
+import { uploadImageAndGetUrl } from "../../../../../lib/uploads"
 import {
   PRODUCT_CREATE_FORM_DEFAULTS,
   ProductCreateSchema,
@@ -43,9 +44,9 @@ type ProductCreateFormProps = {
 }
 
 export const ProductCreateForm = ({
-  defaultChannel,
-  store,
-}: ProductCreateFormProps) => {
+                                    defaultChannel,
+                                    store,
+                                  }: ProductCreateFormProps) => {
   const [tab, setTab] = useState<Tab>(Tab.DETAILS)
   const [tabState, setTabState] = useState<TabState>({
     [Tab.DETAILS]: "in-progress",
@@ -69,11 +70,11 @@ export const ProductCreateForm = ({
       ...PRODUCT_CREATE_FORM_DEFAULTS,
       sales_channels: defaultChannel
         ? [
-            {
-              id: defaultChannel.id,
-              name: defaultChannel.name,
-            },
-          ]
+          {
+            id: defaultChannel.id,
+            name: defaultChannel.name,
+          },
+        ]
         : [],
     },
     schema: ProductCreateSchema,
@@ -108,41 +109,32 @@ export const ProductCreateForm = ({
     const media = values.media || []
     const payload = { ...values, media: undefined }
 
-    let uploadedMedia: (HttpTypes.AdminFile & {
-      isThumbnail: boolean
-    })[] = []
+    // CHANGED: Replaced uploadFilesQuery with S3 uploadImageAndGetUrl flow
+    let uploadedMedia: { url: string; isThumbnail: boolean }[] = []
+
     try {
       if (media.length) {
-        const thumbnailReq = media.filter((m) => m.isThumbnail)
-        const otherMediaReq = media.filter((m) => !m.isThumbnail)
+        uploadedMedia = await Promise.all(
+          media.map(async (m) => {
+            // If it's already a URL (no file), keep it
+            if (!m.file) {
+              return { url: m.url, isThumbnail: m.isThumbnail }
+            }
 
-        const fileReqs = []
-        if (thumbnailReq?.length) {
-          fileReqs.push(
-            uploadFilesQuery(thumbnailReq).then((r: any) =>
-              r.files.map((f: any) => ({
-                ...f,
-                isThumbnail: true,
-              }))
-            )
-          )
-        }
-        if (otherMediaReq?.length) {
-          fileReqs.push(
-            uploadFilesQuery(otherMediaReq).then((r: any) =>
-              r.files.map((f: any) => ({
-                ...f,
-                isThumbnail: false,
-              }))
-            )
-          )
-        }
-
-        uploadedMedia = (await Promise.all(fileReqs)).flat()
+            // If it has a file, upload to S3 via presigned URL
+            const publicUrl = await uploadImageAndGetUrl(m.file)
+            return {
+              url: publicUrl,
+              isThumbnail: m.isThumbnail,
+            }
+          })
+        )
       }
     } catch (error) {
       if (error instanceof Error) {
         toast.error(error.message)
+        // Stop submission if uploads fail
+        return
       }
     }
 
@@ -395,11 +387,11 @@ type PrimaryButtonProps = {
 }
 
 const PrimaryButton = ({
-  tab,
-  next,
-  isLoading,
-  showInventoryTab,
-}: PrimaryButtonProps) => {
+                         tab,
+                         next,
+                         isLoading,
+                         showInventoryTab,
+                       }: PrimaryButtonProps) => {
   const { t } = useTranslation()
 
   if (
