@@ -65,7 +65,22 @@ export async function uploadImage(file: File): Promise<UploadResult> {
     } catch {}
   }
 
-  const result = { mode: presign.mode, key, publicUrl: presign.publicUrl }
+  // In case the backend doesn't give us a public url
+  // We can just derive it from the uploadUrl by stripping the query parameters
+  // Should work until client decides where to store images, most likely S3 as of now
+
+  let publicUrl = presign.publicUrl
+  if (!publicUrl && presign.mode === "s3" && presign.uploadUrl) {
+    try {
+      const u = new URL(presign.uploadUrl)
+      u.search = "" // Remove the signed tokens (?X-Amz...)
+      publicUrl = u.toString()
+    } catch (e) {
+      console.warn("Could not derive publicUrl from uploadUrl", e)
+    }
+  }
+
+  const result = { mode: presign.mode, key, publicUrl }
   console.log("[uploads] final result", result)
   return result
 }
