@@ -35,12 +35,17 @@ async function postJsonUnauthed(path: string, body: Record<string, any>) {
   return text ? JSON.parse(text) : {}
 }
 
-export async function uploadImage(file: File): Promise<UploadResult> {
-  console.log("[uploads] start uploadImage", { name: file.name, type: file.type, size: file.size })
+// CHANGED: Added prefix parameter
+export async function uploadImage(
+  file: File,
+  prefix: "kyc" | "products" = "kyc"
+): Promise<UploadResult> {
+  console.log("[uploads] start uploadImage", { name: file.name, type: file.type, size: file.size, prefix })
   const presign = (await postJsonUnauthed("/public/uploads-presign", {
     fileName: file.name,
     contentType: file.type || "application/octet-stream",
     size: file.size,
+    prefix, // Pass prefix to backend
   })) as PresignResp
 
   console.log("[uploads] presign resp", presign)
@@ -67,8 +72,6 @@ export async function uploadImage(file: File): Promise<UploadResult> {
 
   // In case the backend doesn't give us a public url
   // We can just derive it from the uploadUrl by stripping the query parameters
-  // Should work until client decides where to store images, most likely S3 as of now
-
   let publicUrl = presign.publicUrl
   if (!publicUrl && presign.mode === "s3" && presign.uploadUrl) {
     try {
@@ -85,8 +88,12 @@ export async function uploadImage(file: File): Promise<UploadResult> {
   return result
 }
 
-export async function uploadImageAndGetUrl(file: File): Promise<string> {
-  const res = await uploadImage(file)
+// CHANGED: Added prefix parameter, default to 'products' for convenience when handling media
+export async function uploadImageAndGetUrl(
+  file: File,
+  prefix: "kyc" | "products" = "products"
+): Promise<string> {
+  const res = await uploadImage(file, prefix)
   if (!res.publicUrl) {
     throw new Error("No publicUrl returned by presign")
   }

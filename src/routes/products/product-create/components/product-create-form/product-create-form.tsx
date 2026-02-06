@@ -13,7 +13,6 @@ import {
   useExtendableForm,
 } from "../../../../../extensions"
 import { useCreateProduct } from "../../../../../hooks/api/products"
-// CHANGED: Import the S3 upload helper
 import { uploadImageAndGetUrl } from "../../../../../lib/uploads"
 import {
   PRODUCT_CREATE_FORM_DEFAULTS,
@@ -109,7 +108,6 @@ export const ProductCreateForm = ({
     const media = values.media || []
     const payload = { ...values, media: undefined }
 
-    // CHANGED: Replaced uploadFilesQuery with S3 uploadImageAndGetUrl flow
     let uploadedMedia: { url: string; isThumbnail: boolean }[] = []
 
     try {
@@ -121,8 +119,8 @@ export const ProductCreateForm = ({
               return { url: m.url, isThumbnail: m.isThumbnail }
             }
 
-            // If it has a file, upload to S3 via presigned URL
-            const publicUrl = await uploadImageAndGetUrl(m.file)
+            // CHANGED: Explicitly pass "products" prefix to upload to public folder
+            const publicUrl = await uploadImageAndGetUrl(m.file, "products")
             return {
               url: publicUrl,
               isThumbnail: m.isThumbnail,
@@ -133,7 +131,6 @@ export const ProductCreateForm = ({
     } catch (error) {
       if (error instanceof Error) {
         toast.error(error.message)
-        // Stop submission if uploads fail
         return
       }
     }

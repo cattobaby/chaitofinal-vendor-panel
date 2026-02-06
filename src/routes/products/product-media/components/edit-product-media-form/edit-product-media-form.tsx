@@ -1,3 +1,5 @@
+/home/willman/WebstormProjects/new/new/vendor-panel/src/routes/products/product-media/components/edit-product-media-form/edit-product-media-form.tsx
+
 import {
   defaultDropAnimationSideEffects,
   DndContext,
@@ -36,7 +38,6 @@ import {
 } from "../../../../../components/modals"
 import { KeyboundForm } from "../../../../../components/utilities/keybound-form"
 import { useUpdateProduct } from "../../../../../hooks/api/products"
-// CHANGED: Import the S3 upload helper
 import { uploadImageAndGetUrl } from "../../../../../lib/uploads"
 import { UploadMediaFormItem } from "../../../common/components/upload-media-form-item"
 import {
@@ -104,15 +105,14 @@ export const EditProductMediaForm = ({ product }: ProductMediaViewProps) => {
   const { mutateAsync, isPending } = useUpdateProduct(product.id!)
 
   const handleSubmit = form.handleSubmit(async ({ media }) => {
-    // CHANGED: Use parallel S3 upload flow instead of bulk multipart upload
     let withUpdatedUrls: any[] = []
 
     try {
       withUpdatedUrls = await Promise.all(
         media.map(async (entry) => {
           if (entry.file) {
-            // Upload to S3 and get the public URL
-            const url = await uploadImageAndGetUrl(entry.file)
+            // CHANGED: Explicitly pass "products" prefix
+            const url = await uploadImageAndGetUrl(entry.file, "products")
             return {
               ...entry,
               url,
