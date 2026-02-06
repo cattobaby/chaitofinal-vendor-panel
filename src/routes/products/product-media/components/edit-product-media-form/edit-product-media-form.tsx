@@ -1,4 +1,3 @@
-/home/willman/WebstormProjects/new/new/vendor-panel/src/routes/products/product-media/components/edit-product-media-form/edit-product-media-form.tsx
 
 import {
   defaultDropAnimationSideEffects,
